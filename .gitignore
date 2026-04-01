@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+data/voice_sql_agent.db
+.streamlit/secrets.toml
+.qodo/
+data/bollywood_archive/
