@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from src.agent import VoiceSQLAgent
 from src.data_setup import describe_database, initialize_database
@@ -12,11 +12,24 @@ from src.data_setup import describe_database, initialize_database
 BASE_DIR = Path(__file__).resolve().parent
 app = Flask(__name__, template_folder=str(BASE_DIR / "templates"), static_folder=str(BASE_DIR / "static"))
 agent = VoiceSQLAgent(initialize_database())
+PUBLIC_DIR = BASE_DIR / "public"
 
 
 @app.get("/")
 def index():
     return render_template("index.html")
+
+
+@app.get("/styles.css")
+def styles():
+    asset_dir = PUBLIC_DIR if (PUBLIC_DIR / "styles.css").exists() else BASE_DIR / "static"
+    return send_from_directory(asset_dir, "styles.css")
+
+
+@app.get("/app.js")
+def app_js():
+    asset_dir = PUBLIC_DIR if (PUBLIC_DIR / "app.js").exists() else BASE_DIR / "static"
+    return send_from_directory(asset_dir, "app.js")
 
 
 @app.get("/api/health")

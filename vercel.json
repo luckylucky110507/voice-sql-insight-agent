@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app.py": {
+      "excludeFiles": "{.git/**,.qodo/**,.streamlit/**,freelance-kit/**,static/**,Recommendation system.py,data/bollywood_movies.csv,data/hollywood_movies.csv,data/movies.csv,data/hollywood_movies_template.csv,data/bollywood_movies_template.csv}"
+    }
+  }
+}

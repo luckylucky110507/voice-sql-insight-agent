@@ -151,6 +151,16 @@ The included `Procfile` is:
 web: gunicorn app:app
 ```
 
+### Vercel
+
+Vercel supports WSGI apps such as Flask through its Python runtime. This repo is prepared for Vercel with:
+
+- a top-level `app` object in `app.py`
+- static assets mirrored under `public/`
+- `vercel.json` configured to exclude unnecessary files from the Python function bundle
+
+Import the GitHub repository into Vercel and deploy. For client MySQL mode, add the same database environment variables used locally.
+
 ## User Guide
 
 1. Open the application in a modern browser such as Chrome or Edge.
