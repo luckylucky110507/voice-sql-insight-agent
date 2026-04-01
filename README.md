@@ -1,6 +1,20 @@
 # Voice-Based AI SQL Insight Agent
 
-A working browser-based conversational analytics app that listens to spoken questions, converts them into secure SQL, queries an internal SQLite database, and returns clear spoken business insights.
+A voice-enabled analytics assistant that turns spoken business questions into secure SQL queries and replies with clear spoken insights, trend analysis, and risk signals through a lightweight browser interface.
+
+## Highlights
+
+- Voice input with browser speech-to-text
+- Voice output with text-to-speech responses
+- Natural language to SQL conversion with safety controls
+- Context memory for follow-up questions
+- Trend, anomaly, and risk-focused analytics
+- Transparent SQL and returned-row visibility
+- Optional LLM-backed planning with strict validation
+
+## Why This Project
+
+Most analytics tools still expect users to click through dashboards or write SQL manually. This project makes analytics conversational: users can ask a question out loud, see the generated query path, and receive a direct business-focused answer instead of raw data alone.
 
 ## What It Does
 
@@ -128,8 +142,8 @@ web: python app.py
 To adapt this project for a production client:
 
 1. Replace the sample CSV or point the app to the client database.
-2. Extend the schema map and query templates in [src/agent.py](/c:/Users/princ/OneDrive/Desktop/Lucky%20Projects/codsoft%20internship/src/agent.py).
-3. Configure an OpenAI-compatible planner endpoint in [src/llm_planner.py](/c:/Users/princ/OneDrive/Desktop/Lucky%20Projects/codsoft%20internship/src/llm_planner.py) by setting `LLM_API_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`.
+2. Extend the schema map and query templates in `src/agent.py`.
+3. Configure an OpenAI-compatible planner endpoint in `src/llm_planner.py` by setting `LLM_API_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`.
 4. Add authentication, audit logging, and stricter role-based access controls.
 
 ## Delivery Scope Alignment
@@ -153,4 +167,4 @@ This project now matches the scope you listed for freelancing:
 
 ## Freelancing Materials
 
-Reusable proposal and delivery documents are included in [freelance-kit/README.md](/c:/Users/princ/OneDrive/Desktop/Lucky%20Projects/codsoft%20internship/freelance-kit/README.md).
+Reusable proposal and delivery documents are included in `freelance-kit/README.md`.
