@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,7 @@ import pymysql
 
 DATA_DIR = Path("data")
 CSV_PATH = DATA_DIR / "business_metrics.csv"
-DB_PATH = DATA_DIR / "voice_sql_agent.db"
+DB_PATH = Path(tempfile.gettempdir()) / "voice_sql_agent.db" if os.getenv("VERCEL") else DATA_DIR / "voice_sql_agent.db"
 TABLE_NAME = os.getenv("ANALYTICS_TABLE", "business_metrics").strip() or "business_metrics"
 
 

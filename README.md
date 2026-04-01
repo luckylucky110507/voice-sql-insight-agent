@@ -121,7 +121,8 @@ The sample table includes:
 month, region, product_line, revenue, cost, units_sold, customer_churn, csat, incident_count
 ```
 
-At startup the app creates `data/voice_sql_agent.db` from the CSV file.
+At startup the app creates a local SQLite database from the CSV file.
+On Vercel, the demo SQLite file is created in the temporary runtime directory.
 When `DB_BACKEND=mysql`, the app connects to the configured MySQL database. It seeds sample data only when `DB_SEED_SAMPLE=true`.
 
 ## How Follow-Up Context Works
@@ -135,29 +136,14 @@ the agent reuses earlier context where that makes sense.
 
 ## Deployment
 
-### Render
-
-This repo already includes `render.yaml`. Render can deploy it with:
-
-```bash
-gunicorn app:app
-```
-
-### Procfile-Compatible Hosts
-
-The included `Procfile` is:
-
-```text
-web: gunicorn app:app
-```
-
 ### Vercel
 
-Vercel supports WSGI apps such as Flask through its Python runtime. This repo is prepared for Vercel with:
+This repo is prepared for Vercel with:
 
 - a top-level `app` object in `app.py`
-- static assets mirrored under `public/`
-- `vercel.json` configured to exclude unnecessary files from the Python function bundle
+- frontend assets in `public/`
+- `.python-version`
+- `vercel.json`
 
 Import the GitHub repository into Vercel and deploy. For client MySQL mode, add the same database environment variables used locally.
 
@@ -195,8 +181,3 @@ This project now matches the scope you listed for freelancing:
 
 - Browser speech recognition depends on Web Speech API support.
 - The included dataset is a sample analytics dataset designed to demonstrate trends and risks.
-- The repo still contains some older movie-app files from the previous project state, but they are not used by this system.
-
-## Freelancing Materials
-
-Reusable proposal and delivery documents are included in `freelance-kit/README.md`.
