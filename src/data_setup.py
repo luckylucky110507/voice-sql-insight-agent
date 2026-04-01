@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 import sqlite3
 import tempfile
+from csv import DictReader
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 import pymysql
 
 
@@ -40,17 +40,54 @@ def initialize_database() -> dict[str, Any]:
     return config
 
 
-def _load_sample_dataframe() -> pd.DataFrame:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    dataframe = pd.read_csv(CSV_PATH)
-    dataframe["month"] = pd.to_datetime(dataframe["month"]).dt.strftime("%Y-%m-%d")
-    return dataframe
+def _load_sample_rows() -> list[tuple[Any, ...]]:
+    with CSV_PATH.open("r", encoding="utf-8", newline="") as csv_file:
+        reader = DictReader(csv_file)
+        rows = []
+        for row in reader:
+            rows.append(
+                (
+                    row["month"],
+                    row["region"],
+                    row["product_line"],
+                    float(row["revenue"]),
+                    float(row["cost"]),
+                    int(row["units_sold"]),
+                    float(row["customer_churn"]),
+                    float(row["csat"]),
+                    int(row["incident_count"]),
+                )
+            )
+        return rows
 
 
 def _initialize_sqlite_database(db_path: Path) -> None:
-    dataframe = _load_sample_dataframe()
+    rows = _load_sample_rows()
     with sqlite3.connect(db_path) as connection:
-        dataframe.to_sql(TABLE_NAME, connection, if_exists="replace", index=False)
+        connection.execute(f"DROP TABLE IF EXISTS {TABLE_NAME}")
+        connection.execute(
+            f"""
+            CREATE TABLE {TABLE_NAME} (
+                month TEXT NOT NULL,
+                region TEXT NOT NULL,
+                product_line TEXT NOT NULL,
+                revenue REAL NOT NULL,
+                cost REAL NOT NULL,
+                units_sold INTEGER NOT NULL,
+                customer_churn REAL NOT NULL,
+                csat REAL NOT NULL,
+                incident_count INTEGER NOT NULL
+            )
+            """
+        )
+        connection.executemany(
+            f"""
+            INSERT INTO {TABLE_NAME}
+            (month, region, product_line, revenue, cost, units_sold, customer_churn, csat, incident_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
         connection.execute(
             f"""
             CREATE INDEX IF NOT EXISTS idx_{TABLE_NAME}_month
@@ -104,13 +141,13 @@ def _initialize_mysql_database(config: dict[str, Any]) -> None:
             cursor.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}")
             row_count = int(cursor.fetchone()[0])
             if row_count == 0 and config.get("seed_sample"):
-                dataframe = _load_sample_dataframe()
+                rows = _load_sample_rows()
                 insert_sql = f"""
                     INSERT INTO {TABLE_NAME}
                     (month, region, product_line, revenue, cost, units_sold, customer_churn, csat, incident_count)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                cursor.executemany(insert_sql, dataframe.values.tolist())
+                cursor.executemany(insert_sql, rows)
             if row_count == 0 and not config.get("seed_sample"):
                 raise ValueError(
                     "MySQL table is empty. Set DB_SEED_SAMPLE=true to load demo data, "
