@@ -88,10 +88,13 @@ $env:MYSQL_PORT="3306"
 $env:MYSQL_USER="your-user"
 $env:MYSQL_PASSWORD="your-password"
 $env:MYSQL_DATABASE="your-database"
+$env:DB_SEED_SAMPLE="false"
+$env:ANALYTICS_TABLE="business_metrics"
 python app.py
 ```
 
 If `DB_BACKEND` is not set to `mysql`, the app falls back to the local SQLite demo database generated from `data/business_metrics.csv`.
+If you want MySQL demo data loaded automatically into an empty table, set `DB_SEED_SAMPLE=true`.
 
 ## Example Questions
 
@@ -119,7 +122,7 @@ month, region, product_line, revenue, cost, units_sold, customer_churn, csat, in
 ```
 
 At startup the app creates `data/voice_sql_agent.db` from the CSV file.
-When `DB_BACKEND=mysql`, the app connects to the configured MySQL database and seeds the sample table only if it is empty.
+When `DB_BACKEND=mysql`, the app connects to the configured MySQL database. It seeds sample data only when `DB_SEED_SAMPLE=true`.
 
 ## How Follow-Up Context Works
 

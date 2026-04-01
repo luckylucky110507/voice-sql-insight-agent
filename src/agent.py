@@ -5,11 +5,10 @@ import sqlite3
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.data_setup import open_connection, parameter_placeholder
+from src.data_setup import TABLE_NAME, open_connection, parameter_placeholder
 from src.llm_planner import LLMPlanner
 
 
-TABLE_NAME = "business_metrics"
 REGIONS = ["north", "south", "east", "west"]
 PRODUCTS = ["alpha", "beta"]
 ALLOWED_FILTERS = {

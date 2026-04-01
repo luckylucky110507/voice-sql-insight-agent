@@ -12,7 +12,7 @@ import pymysql
 DATA_DIR = Path("data")
 CSV_PATH = DATA_DIR / "business_metrics.csv"
 DB_PATH = DATA_DIR / "voice_sql_agent.db"
-TABLE_NAME = "business_metrics"
+TABLE_NAME = os.getenv("ANALYTICS_TABLE", "business_metrics").strip() or "business_metrics"
 
 
 def get_database_config() -> dict[str, Any]:
@@ -25,6 +25,7 @@ def get_database_config() -> dict[str, Any]:
             "user": os.getenv("MYSQL_USER", "").strip(),
             "password": os.getenv("MYSQL_PASSWORD", ""),
             "database": os.getenv("MYSQL_DATABASE", "").strip(),
+            "seed_sample": os.getenv("DB_SEED_SAMPLE", "false").strip().lower() == "true",
         }
     return {"backend": "sqlite", "path": DB_PATH}
 
@@ -101,7 +102,7 @@ def _initialize_mysql_database(config: dict[str, Any]) -> None:
             )
             cursor.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}")
             row_count = int(cursor.fetchone()[0])
-            if row_count == 0:
+            if row_count == 0 and config.get("seed_sample"):
                 dataframe = _load_sample_dataframe()
                 insert_sql = f"""
                     INSERT INTO {TABLE_NAME}
@@ -109,6 +110,11 @@ def _initialize_mysql_database(config: dict[str, Any]) -> None:
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 cursor.executemany(insert_sql, dataframe.values.tolist())
+            if row_count == 0 and not config.get("seed_sample"):
+                raise ValueError(
+                    "MySQL table is empty. Set DB_SEED_SAMPLE=true to load demo data, "
+                    "or populate the client table before starting the app."
+                )
             _ensure_mysql_index(cursor, f"idx_{TABLE_NAME}_month", "month")
             _ensure_mysql_index(cursor, f"idx_{TABLE_NAME}_region", "region")
             _ensure_mysql_index(cursor, f"idx_{TABLE_NAME}_product", "product_line")
