@@ -118,7 +118,7 @@ the agent reuses earlier context where that makes sense.
 This repo already includes `render.yaml`. Render can deploy it with:
 
 ```bash
-python app.py
+gunicorn app:app
 ```
 
 ### Procfile-Compatible Hosts
@@ -126,7 +126,7 @@ python app.py
 The included `Procfile` is:
 
 ```text
-web: python app.py
+web: gunicorn app:app
 ```
 
 ## User Guide
