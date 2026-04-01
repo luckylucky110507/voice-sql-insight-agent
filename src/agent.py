@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 import sqlite3
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
+from src.data_setup import open_connection, parameter_placeholder
 from src.llm_planner import LLMPlanner
 
 
@@ -59,8 +59,8 @@ class ConversationContext:
 
 
 class VoiceSQLAgent:
-    def __init__(self, db_path: Path):
-        self.db_path = db_path
+    def __init__(self, db_config: dict[str, Any]):
+        self.db_config = db_config
         self.sessions: dict[str, ConversationContext] = {}
         self.llm_planner = LLMPlanner()
 
@@ -211,8 +211,9 @@ class VoiceSQLAgent:
 
     def _risk_plan(self, metric: str, filters: dict[str, str], planner: str) -> dict[str, Any]:
         where_clause, params = self._build_where(filters)
+        label_sql = self._risk_label_sql()
         sql = f"""
-            SELECT month || ' / ' || region || ' / ' || product_line AS label,
+            SELECT {label_sql} AS label,
                    ROUND(
                        ((customer_churn * 220) + (incident_count * 18) - (csat * 7) + ((cost / revenue) * 100)),
                        2
@@ -231,6 +232,11 @@ class VoiceSQLAgent:
             "params": params,
             "planner": planner,
         }
+
+    def _risk_label_sql(self) -> str:
+        if self.db_config["backend"] == "mysql":
+            return "CONCAT(month, ' / ', region, ' / ', product_line)"
+        return "month || ' / ' || region || ' / ' || product_line"
 
     def _try_llm_plan(self, question: str, context: ConversationContext) -> dict[str, Any] | None:
         payload = self.llm_planner.build_plan(
@@ -284,20 +290,25 @@ class VoiceSQLAgent:
     def _build_where(self, filters: dict[str, str], exclude_dimension: str | None = None) -> tuple[str, list[str]]:
         clauses = []
         params: list[str] = []
+        placeholder = parameter_placeholder(self.db_config)
         for key, value in filters.items():
             if key == exclude_dimension:
                 continue
-            clauses.append(f"{key} = ?")
+            clauses.append(f"{key} = {placeholder}")
             params.append(value)
         if not clauses:
             return "", params
         return "WHERE " + " AND ".join(clauses), params
 
     def _run_query(self, sql: str, params: list[str]) -> list[dict[str, Any]]:
-        with sqlite3.connect(self.db_path) as connection:
-            connection.row_factory = sqlite3.Row
-            rows = connection.execute(sql, params).fetchall()
-        return [dict(row) for row in rows]
+        with open_connection(self.db_config) as connection:
+            if self.db_config["backend"] == "sqlite":
+                connection.row_factory = sqlite3.Row
+                rows = connection.execute(sql, params).fetchall()
+                return [dict(row) for row in rows]
+            with connection.cursor() as cursor:
+                cursor.execute(sql, params)
+                return list(cursor.fetchall())
 
     def _build_response(
         self,

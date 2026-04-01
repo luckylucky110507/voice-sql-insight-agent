@@ -6,7 +6,7 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 
 from src.agent import VoiceSQLAgent
-from src.data_setup import DB_PATH, initialize_database
+from src.data_setup import describe_database, initialize_database
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -21,7 +21,14 @@ def index():
 
 @app.get("/api/health")
 def health():
-    return jsonify({"status": "ok", "database": str(DB_PATH), "llmPlannerEnabled": agent.llm_planner.enabled})
+    return jsonify(
+        {
+            "status": "ok",
+            "database": describe_database(agent.db_config),
+            "dbBackend": agent.db_config["backend"],
+            "llmPlannerEnabled": agent.llm_planner.enabled,
+        }
+    )
 
 
 @app.post("/api/query")

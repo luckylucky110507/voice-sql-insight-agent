@@ -33,6 +33,7 @@ Most analytics tools still expect users to click through dashboards or write SQL
 - Frontend: HTML, CSS, vanilla JavaScript
 - Voice: Web Speech API for speech-to-text and speech synthesis
 - Query layer: controlled LLM planner or deterministic rule-based planner
+- Database: SQLite for demo mode, MySQL for client-ready deployments
 
 ## Project Structure
 
@@ -76,6 +77,22 @@ http://127.0.0.1:5000
 
 4. Allow microphone access in the browser to use voice mode.
 
+## MySQL Configuration
+
+For a client-ready MySQL setup, set these environment variables before starting the app:
+
+```powershell
+$env:DB_BACKEND="mysql"
+$env:MYSQL_HOST="your-host"
+$env:MYSQL_PORT="3306"
+$env:MYSQL_USER="your-user"
+$env:MYSQL_PASSWORD="your-password"
+$env:MYSQL_DATABASE="your-database"
+python app.py
+```
+
+If `DB_BACKEND` is not set to `mysql`, the app falls back to the local SQLite demo database generated from `data/business_metrics.csv`.
+
 ## Example Questions
 
 - `Which region has the highest revenue?`
@@ -90,7 +107,8 @@ http://127.0.0.1:5000
 - SQL is generated only from a constrained internal schema
 - LLM output is limited to a validated JSON plan, not raw SQL
 - Requests are routed through whitelisted query patterns after validation
-- The sample implementation is read-only and scoped to one table: `business_metrics`
+- The implementation is scoped to one analytics table: `business_metrics`
+- MySQL access is configured through environment variables instead of hardcoded credentials
 
 ## Database Schema
 
@@ -101,6 +119,7 @@ month, region, product_line, revenue, cost, units_sold, customer_churn, csat, in
 ```
 
 At startup the app creates `data/voice_sql_agent.db` from the CSV file.
+When `DB_BACKEND=mysql`, the app connects to the configured MySQL database and seeds the sample table only if it is empty.
 
 ## How Follow-Up Context Works
 
@@ -141,7 +160,7 @@ web: gunicorn app:app
 
 To adapt this project for a production client:
 
-1. Replace the sample CSV or point the app to the client database.
+1. Replace the sample CSV or point the app to the client MySQL database.
 2. Extend the schema map and query templates in `src/agent.py`.
 3. Configure an OpenAI-compatible planner endpoint in `src/llm_planner.py` by setting `LLM_API_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL`.
 4. Add authentication, audit logging, and stricter role-based access controls.
