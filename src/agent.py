@@ -9,13 +9,6 @@ from src.data_setup import TABLE_NAME, open_connection, parameter_placeholder
 from src.llm_planner import LLMPlanner
 
 
-REGIONS = ["north", "south", "east", "west"]
-PRODUCTS = ["alpha", "beta"]
-ALLOWED_FILTERS = {
-    "region": {"North", "South", "East", "West"},
-    "product_line": {"Alpha", "Beta"},
-    "month": {"2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01"},
-}
 ALLOWED_DIMENSIONS = {"region", "product_line", "month", "risk"}
 ALLOWED_MODES = {"ranking", "trend", "risk"}
 ALLOWED_SORTS = {"desc", "asc"}
@@ -62,6 +55,52 @@ class VoiceSQLAgent:
         self.db_config = db_config
         self.sessions: dict[str, ConversationContext] = {}
         self.llm_planner = LLMPlanner()
+
+        # Dynamically load real category values from the connected database
+        # instead of relying on hardcoded region/product names. This makes
+        # the agent work with ANY client's data automatically.
+        self.regions: dict[str, str] = self._load_dimension_values("region")
+        self.products: dict[str, str] = self._load_dimension_values("product_line")
+        self.months: dict[str, str] = self._load_dimension_values("month")
+
+        self.allowed_filters: dict[str, set[str]] = {
+            "region": set(self.regions.values()),
+            "product_line": set(self.products.values()),
+            "month": set(self.months.values()),
+        }
+
+    def _load_dimension_values(self, column: str) -> dict[str, str]:
+        """Fetch distinct values for a column from the live database.
+
+        Returns a mapping of lowercase value -> original casing, so we can
+        match user speech (lowercase) back to the exact stored value.
+        Falls back to an empty dict if the query fails for any reason
+        (e.g. table not yet seeded), so app startup never crashes.
+        """
+        sql = f"SELECT DISTINCT {column} FROM {TABLE_NAME} WHERE {column} IS NOT NULL"
+        values: dict[str, str] = {}
+        try:
+            with open_connection(self.db_config) as connection:
+                if self.db_config["backend"] == "sqlite":
+                    connection.row_factory = sqlite3.Row
+                    rows = connection.execute(sql).fetchall()
+                    raw_values = [row[0] for row in rows]
+                else:
+                    with connection.cursor() as cursor:
+                        cursor.execute(sql)
+                        fetched = cursor.fetchall()
+                        raw_values = []
+                        for row in fetched:
+                            if isinstance(row, dict):
+                                raw_values.append(list(row.values())[0])
+                            else:
+                                raw_values.append(row[0])
+            for value in raw_values:
+                if value:
+                    values[str(value).lower()] = str(value)
+        except Exception:
+            pass
+        return values
 
     def handle_query(self, session_id: str, question: str) -> dict[str, Any]:
         context = self.sessions.setdefault(session_id, ConversationContext())
@@ -135,20 +174,22 @@ class VoiceSQLAgent:
     def _detect_dimension(self, normalized: str, context: ConversationContext) -> str:
         if any(term in normalized for term in ["what about", "follow up", "same", "those", "them"]):
             return context.dimension
-        if "product" in normalized or "alpha" in normalized or "beta" in normalized:
+        if "product" in normalized or any(product in normalized for product in self.products):
             return "product_line"
         if "month" in normalized or "trend" in normalized or "time" in normalized:
             return "month"
+        if any(region in normalized for region in self.regions):
+            return "region"
         return "region"
 
     def _detect_filters(self, normalized: str, context: ConversationContext) -> dict[str, str]:
         filters: dict[str, str] = {}
-        for region in REGIONS:
-            if region in normalized:
-                filters["region"] = region.title()
-        for product in PRODUCTS:
-            if product in normalized:
-                filters["product_line"] = product.title()
+        for region_lower, region_original in self.regions.items():
+            if region_lower in normalized:
+                filters["region"] = region_original
+        for product_lower, product_original in self.products.items():
+            if product_lower in normalized:
+                filters["product_line"] = product_original
         for name, iso_date in MONTH_ALIASES.items():
             if name in normalized:
                 filters["month"] = iso_date
@@ -268,9 +309,9 @@ class VoiceSQLAgent:
 
         safe_filters: dict[str, str] = {}
         for key, value in filters.items():
-            if key not in ALLOWED_FILTERS:
+            if key not in self.allowed_filters:
                 return None
-            if value not in ALLOWED_FILTERS[key]:
+            if value not in self.allowed_filters[key]:
                 return None
             safe_filters[key] = value
 
